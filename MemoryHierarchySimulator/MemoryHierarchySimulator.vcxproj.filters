@@ -15,7 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MemoryHierarchySimulator.cpp">
+    <ClCompile Include="MemoryHierarchySimulator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
