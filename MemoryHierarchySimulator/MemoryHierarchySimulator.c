@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <math.h>
 
 #ifndef CONFIG_H
 #include "Config.c"  // Include config.c to access the define
@@ -16,13 +18,12 @@ typedef enum {
     STRONGLY_TAKEN = 3
 } Door_State_t;  // Use a clear and meaningful name
 
-Door_State_t current_state = WEAKLY_NOT_TAKEN;  // Declare the initial state
 typedef struct {
     int v ;
     unsigned int bhr : BHR_BITS;
     int tag;
     int beq_index;
-    Door_State_t local_fsm;
+    Door_State_t local_fsm[FSM_SIZE];
 }Set;
 
 typedef struct {
@@ -31,8 +32,10 @@ typedef struct {
 
 typedef struct {
     Way ways[ASSOCIAT_AMOUNT];
+    bool lru[ENTRIES];
     int is_private;
     Door_State_t global_fsm;
+
 }L_predictor;
 
 void init_Sets(Set* set) {
@@ -40,7 +43,8 @@ void init_Sets(Set* set) {
     set->bhr = 0;
     set->tag = 0;
     set->beq_index = 0;
-    set->local_fsm = WEAKLY_NOT_TAKEN;
+    for(int i=0;0<FSM_SIZE;i++)
+    set->local_fsm[i] = WEAKLY_NOT_TAKEN;
 }
 
 void init_Way(Way* way) {
@@ -58,12 +62,9 @@ void init_L_predictor(L_predictor* predictor) {
     predictor->global_fsm = WEAKLY_NOT_TAKEN;  // Default initial state
 }
 
-
-
-
 // Struct for an instruction
 typedef struct {
-    char address[19];
+    char address[9];
     char mnemonic[MAX_LINE_LENGTH];
     char operands[MAX_LINE_LENGTH];
     int is_branch;
@@ -72,7 +73,9 @@ typedef struct {
 
 // Function to parse a line from the trace file
 int parse_line(char* line, Instruction* inst) {
-    if (sscanf(line, "Info '%*[^']', %18s %*[^:]: %s %s", inst->address, inst->mnemonic, inst->operands) == 3) {
+    if (sscanf(line, "Info '%*[^']', 0x00000000 %8s %*[^:]: %s %s", inst->address, inst->mnemonic, inst->operands) == 3) {
+        // Add the null terminator to inst->address
+        inst->address[8] = '\0';
         if (inst->operands[0] == 'b') {
             inst->is_branch = 1;
             // Assuming branch not taken unless proven otherwise
@@ -93,6 +96,55 @@ int is_branch_taken(char* current_address, char* next_address) {
     return next_addr != (curr_addr + 4);
 }
 
+int mapping(Instruction* current_inst, L_predictor* local_predictor) {
+    int idx = get_index(current_inst->address);
+    int tag= get_tag(current_inst->address);
+    Set set;
+    Way way;
+    for (int i = 0; i < ASSOCIAT_AMOUNT; i++) {
+         set= local_predictor->ways[i].entries[idx];
+        if (set.v) {
+            if (!strcmp(set.tag, tag)) {
+                if (set.local_fsm[set.bhr] >> 1) {
+                    if (current_inst->branch_taken) {
+                        set.local_fsm[set.bhr] += 1;
+                    }
+                    else
+                    {
+                        set.local_fsm[set.bhr] -= 1;
+                    }
+                }
+                set.bhr = set.bhr << 1 + current_inst->branch_taken;
+                local_predictor->lru[idx] = 1 - i;
+            }
+            else
+            {
+                if (i == 1) {
+
+                   way= local_predictor->ways[local_predictor->lru[idx]];
+                   init_Sets(&way.entries[idx]);
+                   if (current_inst->branch_taken) {
+                       way.entries[idx].bhr = 1;
+                   }
+                   local_predictor->lru[idx] = !local_predictor->lru[idx];
+                   //way.entries[idx].local_fsm[0]=way.entries[idx].local_fsm[0];
+                }
+            }
+        }
+    }
+}
+
+int get_index(char* address) {
+    int addr = strtol(address, NULL, 16);
+    return (addr / 4) & (ENTRIES - 1);
+}
+int get_tag(char* address) {
+    int addr = strtol(address, NULL, 16);
+    return (addr & (0xFFFFFFFF - (ENTRIES*4 - 1))) /(ENTRIES * 4);
+    // entries * 4 -  1 creates a mask to make all the index bits as zero
+    // the divion of entries * 4 does a shift right in the same amount of index bits.
+}
+
 // Main function
 int main() {
     FILE* trace_file;
@@ -103,7 +155,7 @@ int main() {
     init_L_predictor(&local_predictor);
 
     // Open trace file
-    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\linkpack_val_mini.trc", "r");
+    trace_file = fopen("E:\\downloads\\RiscV traces with register values\\RiscV traces with register values\\linpack_val2.trc", "r");
     if (trace_file == NULL) {
         perror("Error opening trace file");
         return 1;
@@ -120,6 +172,7 @@ int main() {
                     // Check if current instruction is a branch and if it is taken
                     if (current_inst.is_branch) {
                         current_inst.branch_taken = is_branch_taken(current_inst.address, next_inst.address);
+                        mapping(&current_inst,&local_predictor);
                         // Print the branch instruction
                         printf("Branch Instruction: %s %s %s |", current_inst.address, current_inst.mnemonic, current_inst.operands);
                         printf("Branch Taken: %d\n", current_inst.branch_taken);

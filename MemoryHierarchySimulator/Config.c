@@ -5,6 +5,8 @@
 
 #define BHR_BITS 3  // Replace with the actual value you want
 
+#define FSM_SIZE (1<<BHR_BITS)
+
 #define ENTRIES 2048
 
 #define IS_PRIVATE 1
