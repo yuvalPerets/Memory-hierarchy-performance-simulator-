@@ -43,8 +43,8 @@ void init_Sets(Set* set) {
     set->bhr = 0;
     set->tag = 0;
     set->beq_index = 0;
-    for(int i=0;0<FSM_SIZE;i++)
-    set->local_fsm[i] = WEAKLY_NOT_TAKEN;
+    for(int i=0;i<FSM_SIZE;i++)
+    set->local_fsm[i] = WEAKLY_TAKEN;
 }
 
 void init_Way(Way* way) {
@@ -57,6 +57,9 @@ void init_L_predictor(L_predictor* predictor) {
     // Set default values for members
     for (int i = 0; i < ASSOCIAT_AMOUNT; i++) {
         init_Way(&predictor->ways[i]);
+    }
+    for (int i = 0; i < ENTRIES; i++) {
+        predictor->lru[i] = 0;
     }
     predictor->is_private = IS_PRIVATE;  // Default to not private
     predictor->global_fsm = WEAKLY_NOT_TAKEN;  // Default initial state
@@ -120,17 +123,33 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
             else
             {
                 if (i == 1) {
-
                    way= local_predictor->ways[local_predictor->lru[idx]];
                    init_Sets(&way.entries[idx]);
                    if (current_inst->branch_taken) {
-                       way.entries[idx].bhr = 1;
+                       way.entries[idx].bhr +=1;
                    }
                    local_predictor->lru[idx] = !local_predictor->lru[idx];
-                   //way.entries[idx].local_fsm[0]=way.entries[idx].local_fsm[0];
+                   local_predictor->ways[i] = way;
                 }
             }
         }
+        else {
+            if (set.local_fsm[set.bhr] >> 1) {
+                if (current_inst->branch_taken) {
+                    set.local_fsm[set.bhr] += 1;
+                }
+                else
+                {
+                    set.local_fsm[set.bhr] -= 1;
+                }
+            }
+            set.bhr = (set.bhr << 1) + current_inst->branch_taken;
+            local_predictor->lru[idx] = 1 - i;
+            set.v = 1;
+            break;
+        }
+        local_predictor->ways[i].entries[idx] = set;
+        
     }
 }
 
