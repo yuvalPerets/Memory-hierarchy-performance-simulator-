@@ -7,7 +7,7 @@
 
 #define FSM_SIZE (1<<BHR_BITS)
 
-#define ENTRIES 2048
+#define ENTRIES 8192
 
 #define IS_PRIVATE 1
 
