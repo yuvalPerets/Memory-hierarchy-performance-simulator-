@@ -107,6 +107,35 @@ int is_branch_taken(char* current_address, char* next_address) {
     return next_addr != (curr_addr + 4);
 }
 
+
+int get_index(char* address) {
+    int addr = strtol(address, NULL, 16);
+    return (addr / 4) & (ENTRIES - 1);
+    //address/4 because the 2 lsb are allways zeros, and we dont taking them into account for the index.
+    //for example entiries : (1024)10 = (10000000000)2 -> 1024-1 = ( 1111111111)2 , then the & should only leave us with the index bits.
+}
+
+int get_tag(char* address) {
+    int addr = strtol(address, NULL, 16);
+    return (addr & (0xFFFFFFFF - (ENTRIES * 4 - 1))) / (ENTRIES * 4);
+    // entries * 4 -  1 creates a mask to make all the index bits as zero
+    // the divion of entries * 4 does a shift right in the same amount of index bits.
+}
+
+void increase_fsm(Door_State_t* fsm)
+{
+    if (*fsm != 3)// unless strongly taken -> fsm + 1 
+        *fsm += 1;
+}
+
+void decrease_fsm(Door_State_t* fsm)
+{
+    if (*fsm != 0)// unless strongly not taken -> fsm - 1 
+        *fsm -= 1;
+}
+
+
+
 int mapping(Instruction* current_inst, L_predictor* local_predictor) {
     //split the index and tag name from the address.
     int idx = get_index(current_inst->address);
@@ -119,26 +148,23 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
         if (set->v) {
             if (set->tag==tag) {
                 if (set->local_fsm[set->bhr] >> 1) { //check the msb of local state machine to make a decision.
+                    // (11 || 10 ) >> 1  --> 1 . true  ||  ( 00 || 01 ) >> 1  --> 0 . false
                     if (current_inst->branch_taken) {//correct predict taken.
-                        if (set->local_fsm[set->bhr] != 3)
-                        set->local_fsm[set->bhr] += 1;
+                        increase_fsm(&(set->local_fsm[set->bhr]));
                     }
                     else //incorrect predict taken.
                     {
-                        if (set->local_fsm[set->bhr] != 0)
-                        set->local_fsm[set->bhr] -= 1;
-                        miss_count++;
+                        decrease_fsm(&(set->local_fsm[set->bhr]));
+                        miss_count++; // we predict taken (msb of local fsm is 1 ) but the branch wasn't taken
                     }
                 }
                 else {
                     if (!current_inst->branch_taken) {//correct predict not-taken.
-                        if (set->local_fsm[set->bhr] != 0)
-                        set->local_fsm[set->bhr] -= 1;
+                        decrease_fsm(&(set->local_fsm[set->bhr]));
                     }
                     else //incorrect predict not-taken.
                     {
-                        if (set->local_fsm[set->bhr] != 3)
-                        set->local_fsm[set->bhr] += 1;
+                        increase_fsm(&(set->local_fsm[set->bhr]));
                         miss_count++;
                     }
                 }
@@ -183,19 +209,6 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
     }
 }
 
-int get_index(char* address) {
-    int addr = strtol(address, NULL, 16);
-    return (addr / 4) & (ENTRIES - 1);
-    //address/4 because the 2 lsb are allways zeros, and we dont taking them into account for the index.
-    //for example entiries : (1024)10 = (10000000000)2 -> 1024-1 = ( 1111111111)2 , then the & should only leave us with the index bits.
-}
-
-int get_tag(char* address) {
-    int addr = strtol(address, NULL, 16);
-    return (addr & (0xFFFFFFFF - (ENTRIES*4 - 1))) /(ENTRIES * 4);
-    // entries * 4 -  1 creates a mask to make all the index bits as zero
-    // the divion of entries * 4 does a shift right in the same amount of index bits.
-}
 
 // Main function
 int main() {
@@ -207,7 +220,7 @@ int main() {
     init_L_predictor(&local_predictor);
 
     // Open trace file
-    trace_file = fopen("E:\\downloads\\RiscV traces with register values\\RiscV traces with register values\\linpack_val.trc", "r");
+    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\coremark_val.trc", "r");
     if (trace_file == NULL) {
         perror("Error opening trace file");
         return 1;
@@ -229,7 +242,7 @@ int main() {
                         //printf("Branch Instruction: %s %s %s |", current_inst.address, current_inst.mnemonic, current_inst.operands);
                         //printf("Branch Taken: %d\n", current_inst.branch_taken);
                         if (instruction_count % 100000 == 0) {
-                            printf("yayyyy\n");
+                            printf("passed hunread of thousands instructions \n");
                         }
                     }
                     // Simulate instruction execution
