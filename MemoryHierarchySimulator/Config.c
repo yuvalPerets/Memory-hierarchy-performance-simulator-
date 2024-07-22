@@ -7,7 +7,13 @@
 
 #define FSM_SIZE (1<<BHR_BITS)
 
-#define ENTRIES 8192
+#define GHR_BITS 6
+
+#define FSM_SIZE_SHARED (1<<GHR_BITS)
+
+#define ENTRIES 2048
+
+#define SET_SIZE (ENTRIES / ASSOCIAT_AMOUNT)
 
 #define IS_PRIVATE 1
 

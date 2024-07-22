@@ -16,6 +16,8 @@ int miss_count = 0;
 int branch_instruction_count = 0;
 long long int instruction_count = 0;
 
+int global_miss_count = 0;
+
 typedef enum {
     STRONGLY_NOT_TAKEN = 0,
     WEAKLY_NOT_TAKEN = 1,
@@ -32,42 +34,56 @@ typedef struct {
 }Set;
 
 typedef struct {
-    Set entries[ENTRIES];
+    Set entries[SET_SIZE];
 }Way;
 
 typedef struct {
     Way ways[ASSOCIAT_AMOUNT];
-    bool lru[ENTRIES];
+    bool lru[SET_SIZE];
     int is_private;
-    Door_State_t global_fsm;
-
+    Door_State_t global_fsm[FSM_SIZE];
 }L_predictor;
+
+typedef struct {
+    unsigned int ghr : GHR_BITS;
+    Door_State_t global_fsm[FSM_SIZE_SHARED];
+}G_predictor;
 
 void init_Sets(Set* set) {
     set->v = 0;
     set->bhr = 0;
     set->tag = 0;
     set->beq_index = 0;
+    // we can consider not init for global fsm
     for(int i=0;i<FSM_SIZE;i++)
     set->local_fsm[i] = WEAKLY_NOT_TAKEN;
 }
 
 void init_Way(Way* way) {
-    for (int i = 0; i < ENTRIES; i++) {
+    for (int i = 0; i < SET_SIZE; i++) {
         init_Sets(&way->entries[i]);
     }
 }
 
 void init_L_predictor(L_predictor* predictor) {
     // Set default values for members
-    for (int i = 0; i < ASSOCIAT_AMOUNT; i++) {
+    for (int i = 0; i < ASSOCIAT_AMOUNT ; i++) {
         init_Way(&predictor->ways[i]);
     }
-    for (int i = 0; i < ENTRIES; i++) {
+    for (int i = 0; i < SET_SIZE; i++) {
         predictor->lru[i] = 0;
     }
     predictor->is_private = IS_PRIVATE;  // Default to not private
-    predictor->global_fsm = WEAKLY_NOT_TAKEN;  // Default initial state
+    //we can also init only when set not private fsm
+    for (int i = 0; i < FSM_SIZE; i++)
+        predictor->global_fsm[i] = WEAKLY_NOT_TAKEN;// Default initial state
+
+}
+
+void init_G_predictor(G_predictor* predictor) {
+    predictor->ghr = 0;
+    for (int i = 0; i < FSM_SIZE_SHARED; i++)
+        predictor->global_fsm[i] = WEAKLY_NOT_TAKEN;
 }
 
 // Struct for an instruction
@@ -110,14 +126,14 @@ int is_branch_taken(char* current_address, char* next_address) {
 
 int get_index(char* address) {
     int addr = strtol(address, NULL, 16);
-    return (addr / 4) & (ENTRIES - 1);
+    return (addr / 4) & (SET_SIZE - 1);
     //address/4 because the 2 lsb are allways zeros, and we dont taking them into account for the index.
     //for example entiries : (1024)10 = (10000000000)2 -> 1024-1 = ( 1111111111)2 , then the & should only leave us with the index bits.
 }
 
 int get_tag(char* address) {
     int addr = strtol(address, NULL, 16);
-    return (addr & (0xFFFFFFFF - (ENTRIES * 4 - 1))) / (ENTRIES * 4);
+    return (addr & (0xFFFFFFFF - (SET_SIZE * 4 - 1))) / (SET_SIZE * 4);
     // entries * 4 -  1 creates a mask to make all the index bits as zero
     // the divion of entries * 4 does a shift right in the same amount of index bits.
 }
@@ -134,21 +150,23 @@ void decrease_fsm(Door_State_t* fsm)
         *fsm -= 1;
 }
 
-
-
+//function that handles all the logic for the local predicotr .
 int mapping(Instruction* current_inst, L_predictor* local_predictor) {
     //split the index and tag name from the address.
     int idx = get_index(current_inst->address);
     int tag= get_tag(current_inst->address);
     Set* set;
     Way* way = &local_predictor->ways[local_predictor->lru[idx]];
+    //logic for local predictor behavior.
     //run on each way separately.
     for (int i = 0; i < ASSOCIAT_AMOUNT; i++) {
          set= &local_predictor->ways[i].entries[idx];
         if (set->v) {
             if (set->tag==tag) {
+                // need to check if we are using local or shared fsm
                 if (set->local_fsm[set->bhr] >> 1) { //check the msb of local state machine to make a decision.
                     // (11 || 10 ) >> 1  --> 1 . true  ||  ( 00 || 01 ) >> 1  --> 0 . false
+
                     if (current_inst->branch_taken) {//correct predict taken.
                         increase_fsm(&(set->local_fsm[set->bhr]));
                     }
@@ -188,7 +206,6 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
                    //change the lru to the second way.
                    local_predictor->lru[idx] = !local_predictor->lru[idx];
                    local_predictor->ways[i] = *way;
-                   printf("in way 1\n");
                    return 1;
                 }
             }
@@ -209,6 +226,28 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
     }
 }
 
+int Global_mapping(Instruction* current_inst, G_predictor* global_predictor) {
+    //checking msb for the fsm . getting the correct one from the global preditor ghr
+    //after we get our result we need to update according to if the branch was taken or not
+    if (global_predictor->global_fsm[global_predictor->ghr] >> 1) { // checking the msb
+        if (current_inst->branch_taken)
+            increase_fsm(&global_predictor->global_fsm[global_predictor->ghr]);
+        else {
+            global_miss_count++;
+            decrease_fsm(&global_predictor->global_fsm[global_predictor->ghr]);
+        }
+    }
+    else {
+        if (current_inst->branch_taken) {
+            global_miss_count++;
+            increase_fsm(&global_predictor->global_fsm[global_predictor->ghr]);
+        }else
+            decrease_fsm(&global_predictor->global_fsm[global_predictor->ghr]);
+    }
+    // now updtaing the ghr , we should shift left all the ghr and add if the branch was taken or not
+    global_predictor->ghr = (global_predictor->ghr << 1) + current_inst->branch_taken;
+
+}
 
 // Main function
 int main() {
@@ -217,10 +256,12 @@ int main() {
     Instruction current_inst;
     Instruction next_inst;
     L_predictor local_predictor;
+    G_predictor global_predictor;
     init_L_predictor(&local_predictor);
+    init_G_predictor(&global_predictor);
 
     // Open trace file
-    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\coremark_val.trc", "r");
+    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\linpack_val.trc", "r");
     if (trace_file == NULL) {
         perror("Error opening trace file");
         return 1;
@@ -238,6 +279,7 @@ int main() {
                         branch_instruction_count++;
                         current_inst.branch_taken = is_branch_taken(current_inst.address, next_inst.address);
                         mapping(&current_inst,&local_predictor);
+                        Global_mapping(&current_inst, &global_predictor);
                         // Print the branch instruction
                         //printf("Branch Instruction: %s %s %s |", current_inst.address, current_inst.mnemonic, current_inst.operands);
                         //printf("Branch Taken: %d\n", current_inst.branch_taken);
@@ -255,10 +297,15 @@ int main() {
 
     // Close trace file
     fclose(trace_file);
+    printf("prints for local predictor\n");
     printf("miss_count: %d\n", miss_count);
     printf("branch_instruction_count: %d\n", branch_instruction_count);
     printf("instruction_count: %lld\n", instruction_count);
     printf("miss predict: %f\n", (float)miss_count/branch_instruction_count);
     printf("mpi: %f\n", (float)miss_count/ instruction_count);
+    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+    printf("showing the miss rate for global precitor : ");
+    printf("%f", (float)global_miss_count / branch_instruction_count);
+
     return 0;
 }
