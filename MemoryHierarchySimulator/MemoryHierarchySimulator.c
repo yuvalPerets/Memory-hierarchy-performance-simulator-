@@ -261,7 +261,7 @@ int main() {
     init_G_predictor(&global_predictor);
 
     // Open trace file
-    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\linpack_val.trc", "r");
+    trace_file = fopen("D:\\הנדסת מחשבים\\שנה 4\\סמסטר ב\\ארכיטקטורות מחשבים מתקדמות\\RiscV traces with register values\\coremark_val.trc", "r");
     if (trace_file == NULL) {
         perror("Error opening trace file");
         return 1;
@@ -301,11 +301,11 @@ int main() {
     printf("miss_count: %d\n", miss_count);
     printf("branch_instruction_count: %d\n", branch_instruction_count);
     printf("instruction_count: %lld\n", instruction_count);
-    printf("miss predict: %f\n", (float)miss_count/branch_instruction_count);
-    printf("mpi: %f\n", (float)miss_count/ instruction_count);
+    printf("miss predict: %.2f%%\n", ((float)miss_count / branch_instruction_count) * 100);
+    printf("mpi: %.2f%%\n", ((float)miss_count/ instruction_count) * 100);
     printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
     printf("showing the miss rate for global precitor : ");
-    printf("%f", (float)global_miss_count / branch_instruction_count);
+    printf("%.2f%%\n", ((float)global_miss_count / branch_instruction_count) * 100);
 
     return 0;
 }
