@@ -18,4 +18,9 @@
 #define IS_PRIVATE 1
 
 #define IS_LOCAL 1
+
+#define FILE_NAME "dhrystone_val.trc"
+
+#define FILE_PATH "E:\\downloads\\RiscV traces with register values\\RiscV traces with register values\\"
+
 #endif
