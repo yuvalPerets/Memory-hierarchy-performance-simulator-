@@ -139,14 +139,15 @@ int is_branch_taken(char* current_address, char* next_address) {
 
 int get_index(char* address) {
     int addr = strtol(address, NULL, 16);
-    return (addr / 4) & (SET_SIZE - 1);
+    int temp = SET_SIZE - 1;
+    return (addr >> 2) & (SET_SIZE - 1);
     //address/4 because the 2 lsb are allways zeros, and we dont taking them into account for the index.
     //for example entiries : (1024)10 = (10000000000)2 -> 1024-1 = ( 1111111111)2 , then the & should only leave us with the index bits.
 }
 
 int get_tag(char* address) {
     int addr = strtol(address, NULL, 16);
-    return (addr & (0xFFFFFFFF - (SET_SIZE * 4 - 1))) / (SET_SIZE * 4);
+    return (addr & (0xFFFFFFFF - (SET_SIZE << 2 - 1))) / (SET_SIZE << 2);
     // entries * 4 -  1 creates a mask to make all the index bits as zero
     // the divion of entries * 4 does a shift right in the same amount of index bits.
 }
@@ -181,6 +182,7 @@ void display_progress(int progress, int total) {
     printf("Entries: %d\n", ENTRIES);
     printf("history size: %d\n", BHR_BITS);
     printf("fsm size: %d\n", FSM_SIZE);
+    printf("global history: %d\n", GHR_BITS);
     printf("[");
     int pos = bar_width * progress_percentage;
     for (int i = 0; i < bar_width; ++i) {
@@ -328,7 +330,7 @@ int Global_mapping(Instruction* current_inst, G_predictor* global_predictor) {
 }
 
 //we are taking the miss count for the predictor of the tournament is going to use.
-int Tourment_mapping(int idx,T_predictor* tournament_predictor,int temp_m_count,int temp_g_m_count) {
+int Tournament_mapping(int idx,T_predictor* tournament_predictor,int temp_m_count,int temp_g_m_count) {
     
     if (tournament_predictor->chooser_fsm[idx] >> 1) {
         //we are getting the index of the instruction to get a correct fsm from the chooser
@@ -412,7 +414,7 @@ int main() {
                         temp_g_m_count = global_miss_count;
                         mapping(&current_inst,&local_predictor);
                         Global_mapping(&current_inst, &global_predictor);
-                        Tourment_mapping(idx,&tournament_predictor,temp_m_count,temp_g_m_count);
+                        Tournament_mapping(idx,&tournament_predictor,temp_m_count,temp_g_m_count);
                         //here we need to check if our assumption was correct, if not need to check for upgrade.
                         // Print the branch instruction
                         //printf("Branch Instruction: %s %s %s |", current_inst.address, current_inst.mnemonic, current_inst.operands);
