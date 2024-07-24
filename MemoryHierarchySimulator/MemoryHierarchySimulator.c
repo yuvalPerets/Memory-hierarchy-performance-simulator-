@@ -302,7 +302,6 @@ int mapping(Instruction* current_inst, L_predictor* local_predictor) {
             }
             return 1;
         }
-        //local_predictor->ways[i].entries[idx] = *set;
         
     }
 }
@@ -369,6 +368,25 @@ int Tournament_mapping(int idx,T_predictor* tournament_predictor,int temp_m_coun
     }
 }
 
+void print_results() {
+    printf("instruction_count: %lld\n", instruction_count);
+    printf("branch_instruction_count: %d\n", branch_instruction_count);
+    printf("prints for local predictor\n");
+    printf("miss_count: %d\n", miss_count);
+    printf("miss predict: %.2f%%\n", ((float)miss_count / branch_instruction_count) * 100);
+    printf("local mpi: %.2f%%\n", ((float)miss_count / instruction_count) * 100);
+    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+    printf("prints for global predictor\n");
+    printf("showing the miss rate for global precitor : ");
+    printf("%.2f%%\n", ((float)global_miss_count / branch_instruction_count) * 100);
+    printf("global mpi: %.2f%%\n", ((float)global_miss_count / instruction_count) * 100);
+    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+    printf("prints for tournament predictor\n");
+    printf("showing the miss rate for tournament precitor : ");
+    printf("%.2f%%\n", ((float)tournament_miss_count / branch_instruction_count) * 100);
+    printf("tournament mpi: %.2f%%\n", ((float)tournament_miss_count / instruction_count) * 100);
+}
+
 // Main function
 int main() {
     display_progress(0,9999999);
@@ -415,7 +433,6 @@ int main() {
                         mapping(&current_inst,&local_predictor);
                         Global_mapping(&current_inst, &global_predictor);
                         Tournament_mapping(idx,&tournament_predictor,temp_m_count,temp_g_m_count);
-                        //here we need to check if our assumption was correct, if not need to check for upgrade.
                         // Print the branch instruction
                         //printf("Branch Instruction: %s %s %s |", current_inst.address, current_inst.mnemonic, current_inst.operands);
                         //printf("Branch Taken: %d\n", current_inst.branch_taken);
@@ -434,22 +451,6 @@ int main() {
     printf("\n");
     // Close trace file
     fclose(trace_file);
-    printf("instruction_count: %lld\n", instruction_count);
-    printf("branch_instruction_count: %d\n", branch_instruction_count);
-    printf("prints for local predictor\n");
-    printf("miss_count: %d\n", miss_count);
-    printf("miss predict: %.2f%%\n", ((float)miss_count / branch_instruction_count) * 100);
-    printf("local mpi: %.2f%%\n", ((float)miss_count/ instruction_count) * 100);
-    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-    printf("prints for global predictor\n");
-    printf("showing the miss rate for global precitor : ");
-    printf("%.2f%%\n", ((float)global_miss_count / branch_instruction_count) * 100);
-    printf("global mpi: %.2f%%\n", ((float)global_miss_count / instruction_count) * 100);
-    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-    printf("prints for tournament predictor\n");
-    printf("showing the miss rate for tournament precitor : ");
-    printf("%.2f%%\n", ((float)tournament_miss_count / branch_instruction_count) * 100);
-    printf("tournament mpi: %.2f%%\n", ((float)tournament_miss_count / instruction_count) * 100);
-
+    print_results();
     return 0;
 }
