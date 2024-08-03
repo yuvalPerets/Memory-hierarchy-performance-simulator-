@@ -58,32 +58,24 @@ This file contains the main logic for the simulator, including data structures, 
    ```sh
    gcc MemoryHierarchySimulator.c -o simulator
 
-Compilation and Execution
+## Configuration
 
-1.Compile: Use the following command to compile the code:
-![image](https://github.com/user-attachments/assets/ada77c64-80e4-404e-a33d-dd76138b3fd8)
-2.Run: Execute the compiled program:
-![image](https://github.com/user-attachments/assets/eec60777-464c-4f3e-98fa-6c813ba95dc6)
-Configuration
-The config.c file contains various configuration parameters that can be adjusted according to your needs:
+You can customize the simulation by modifying the parameters in the `config.c` file. Key parameters include:
 
-ASSOCIAT_AMOUNT: Number of associativity ways.
-BHR_BITS: Number of bits for the branch history register.
-FSM_SIZE: Size of the finite state machine.
-GHR_BITS: Number of bits for the global history register.
-FSM_SIZE_SHARED: Size of the shared finite state machine.
-ENTRIES: Number of entries.
-SET_SIZE: Size of each set.
-IS_PRIVATE: Flag indicating if the predictor is private.
-IS_LOCAL: Flag indicating if the predictor is local.
-FILE_NAME: Name of the trace file.
-FILE_PATH: Path to the trace file.
+- `ASSOCIAT_AMOUNT`: Set the cache associativity. For example, you can set it to 4 for a 4-way set associative cache.
+- `BHR_BITS`: Configure the size of the Branch History Register (BHR). For instance, setting it to 8 will use an 8-bit BHR.
+- `FSM_SIZE`: Define the size of the Finite State Machine (FSM) for local prediction. For example, you can set it to 256 for a 256-state FSM.
+- `GHR_BITS`: Configure the size of the Global History Register (GHR). For instance, setting it to 12 will use a 12-bit GHR.
+- `FSM_SIZE_SHARED`: Define the size of the FSM for global prediction. For example, you can set it to 128 for a 128-state FSM.
+- `ENTRIES`: Set the number of entries in the cache. For instance, setting it to 1024 will use a 1024-entry cache.
+- `SET_SIZE`: Define the size of each set in the cache. For example, you can set it to 64 for a 64-set cache.
+- `IS_PRIVATE`: Toggle between private and shared predictors. Set to 1 for private, 0 for shared.
+- `IS_LOCAL`: Toggle between local and global predictors. Set to 1 for local, 0 for global.
+- `FILE_NAME` and `FILE_PATH`: Specify the name and path of the trace file used for simulation. For example, you can set `FILE_NAME` to `"trace.txt"` and `FILE_PATH` to `"/path/to/trace.txt"`.
 
-Output
-The simulator provides various statistics, including:
+To apply these configurations, modify the respective definitions in the `config.c` file before compiling the simulator.
 
-Total instruction count
-Total branch instruction count
-Miss count and miss prediction rate for local, global, and tournament predictors
-License
-This project is licensed under the MIT License.
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
