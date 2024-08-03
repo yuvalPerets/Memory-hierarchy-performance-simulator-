@@ -15,7 +15,7 @@ This file contains configuration definitions for the simulator. It includes macr
 - `FSM_SIZE_SHARED`: Defines the size of the FSM for global prediction.
 - `ENTRIES`: Defines the number of entries in the cache.
 - `SET_SIZE`: Defines the size of each set in the cache.
-- `IS_PRIVATE` and `IS_LOCAL`: Flags to indicate if the predictor is private or local.
+- `IS_PRIVATE` and `IS_LOCAL`: Flags to indicate if the predictor is using private or local state machines.
 - `FILE_NAME` and `FILE_PATH`: Define the name and path of the trace file used for simulation.
 
 ### MemoryHierarchySimulator.c
