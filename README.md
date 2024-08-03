@@ -57,6 +57,9 @@ This file contains the main logic for the simulator, including data structures, 
 4. Compile the code using your C compiler. For example:
    ```sh
    gcc MemoryHierarchySimulator.c -o simulator
+5. Run the compiled simulator:
+    ```sh
+    ./simulator
 
 ## Configuration
 
