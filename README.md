@@ -22,6 +22,10 @@ This file contains configuration definitions for the simulator. It includes macr
 
 This file contains the main logic for the simulator, including data structures, initialization functions, and the main simulation loop.
 
+## Trace Files
+
+I am providing a link to download trace files to test the project. [Download Trace Files](https://drive.google.com/drive/u/0/folders/1B5zJfjLx4WUDQLKcQ-DfKtaLHlJiZlWi)
+
 #### Key Components
 
 1. **Constants and Global Variables**:
