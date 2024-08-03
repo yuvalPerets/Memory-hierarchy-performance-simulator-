@@ -1,12 +1,62 @@
-Memory Hierarchy Performance Simulator
-This repository contains a simulator to analyze the performance of memory hierarchies, specifically focusing on branch prediction using different predictors: local, global, and tournament. The simulator reads from a trace file and evaluates the prediction accuracy.
+# Memory Hierarchy Performance Simulator
 
-Files
-config.c
-This file contains macro definitions used throughout the simulator.
+This project is a performance simulator for branch prediction in a memory hierarchy. The simulator is implemented in C and consists of two main files: `config.c` and `MemoryHierarchySimulator.c`.
 
-MemoryHierarchySimulator.c
-This file contains the main implementation of the memory hierarchy performance simulator.
+## Files
+
+### config.c
+
+This file contains configuration definitions for the simulator. It includes macro definitions that configure various parameters such as:
+
+- `ASSOCIAT_AMOUNT`: Defines the associativity of the cache.
+- `BHR_BITS`: Defines the number of bits used for the Branch History Register (BHR).
+- `FSM_SIZE`: Defines the size of the Finite State Machine (FSM) for local prediction.
+- `GHR_BITS`: Defines the number of bits used for the Global History Register (GHR).
+- `FSM_SIZE_SHARED`: Defines the size of the FSM for global prediction.
+- `ENTRIES`: Defines the number of entries in the cache.
+- `SET_SIZE`: Defines the size of each set in the cache.
+- `IS_PRIVATE` and `IS_LOCAL`: Flags to indicate if the predictor is private or local.
+- `FILE_NAME` and `FILE_PATH`: Define the name and path of the trace file used for simulation.
+
+### MemoryHierarchySimulator.c
+
+This file contains the main logic for the simulator, including data structures, initialization functions, and the main simulation loop.
+
+#### Key Components
+
+1. **Constants and Global Variables**:
+   - Define various constants and global variables used throughout the simulator, such as counters for miss counts and instruction counts.
+
+2. **Enumerations and Structs**:
+   - `Door_State_t`: An enumeration representing the state of the branch predictor (e.g., strongly taken, weakly taken).
+   - `Set`, `Way`, `L_predictor`, `G_predictor`, `T_predictor`: Structs representing different components of the predictor.
+
+3. **Initialization Functions**:
+   - Functions to initialize the various components of the predictor (e.g., `init_Sets`, `init_Way`, `init_L_predictor`, `init_G_predictor`, `init_T_predictor`).
+
+4. **Instruction Parsing**:
+   - Functions to parse the trace file and extract instruction information.
+
+5. **Branch Prediction Logic**:
+   - Functions to implement the branch prediction logic for local, global, and tournament predictors (e.g., `mapping`, `Global_mapping`, `Tournament_mapping`).
+
+6. **Simulation Loop**:
+   - The main loop that reads instructions from the trace file, simulates the execution, and updates the predictors accordingly.
+
+7. **Utility Functions**:
+   - Various utility functions for tasks such as clearing the screen and displaying progress.
+
+8. **Results Printing**:
+   - Function to print the simulation results, including miss rates and other statistics.
+
+## How to Run
+
+1. Ensure you have a C compiler installed on your system.
+2. Clone the repository.
+3. Modify the `config.c` file to set the desired configuration parameters.
+4. Compile the code using your C compiler. For example:
+   ```sh
+   gcc MemoryHierarchySimulator.c -o simulator
 
 Compilation and Execution
 
